@@ -1,0 +1,37 @@
+{
+  "eligible_pages": 9102,
+  "base_rate": 0.3606,
+  "cv": "GroupKFold(5) by client_id",
+  "seed": 42,
+  "sklearn": "1.8.0",
+  "model_vs_baseline": {
+    "Baseline rule (W04 logic)": {
+      "precision@50": 0.704,
+      "precision@100": 0.636,
+      "precision@200": 0.588,
+      "AUC": 0.7376,
+      "lift_vs_base@50": 2.0486
+    },
+    "Decision tree (depth 3)": {
+      "precision@50": 0.644,
+      "precision@100": 0.68,
+      "precision@200": 0.666,
+      "AUC": 0.7895,
+      "lift_vs_base@50": 1.874
+    },
+    "Logistic Regression": {
+      "precision@50": 0.8,
+      "precision@100": 0.764,
+      "precision@200": 0.742,
+      "AUC": 0.823,
+      "lift_vs_base@50": 2.328
+    },
+    "Random Forest": {
+      "precision@50": 0.816,
+      "precision@100": 0.818,
+      "precision@200": 0.752,
+      "AUC": 0.8337,
+      "lift_vs_base@50": 2.3746
+    }
+  }
+}
