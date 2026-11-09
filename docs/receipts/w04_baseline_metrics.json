@@ -1,0 +1,19 @@
+{
+  "rows_in_file": 30000,
+  "rows_scored_impressions_ge_100": 22006,
+  "rows_flagged": 15467,
+  "tier_pooled_ctr_pct": {
+    "top_3": 0.4871,
+    "page_1": 0.3499,
+    "striking": 0.3468,
+    "page_3_5": 0.1547,
+    "deep": 0.0395
+  },
+  "signal_1_verdict": "CONFIRMED",
+  "signal_2_verdict": "CONFIRMED (3 of 3 testable tiers)",
+  "inputs_used": [
+    "impressions_90d",
+    "clicks_90d",
+    "position_tier"
+  ]
+}
