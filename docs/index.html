@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Which web pages are under-capturing clicks? A review queue tested on clients it had never seen</title>
+<meta name="description" content="A research write-up on ranking pages for human review by their chance of under-capturing search clicks, tested on held-out clients, built on FlyRank's anonymized starter dataset.">
+<meta name="author" content="Abdul Rehman Shahid">
+<style>
+:root{--bg:#fbfaf7;--fg:#1f2328;--muted:#58606a;--rule:#d9d6cd;--accent:#0b5c8a;--card:#f1efe8;--note:#fff6e0;--note-edge:#c98a00}
+@media (prefers-color-scheme:dark){:root{--bg:#14171a;--fg:#e7e9ea;--muted:#a5adb5;--rule:#343b41;--accent:#74b8e6;--card:#1d2226;--note:#2a2415;--note-edge:#d6a21f}}
+*{box-sizing:border-box}
+html{font-size:100%;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;font-size:1.125rem;line-height:1.62}
+.skip{position:absolute;left:-999px;top:0;background:var(--fg);color:var(--bg);padding:.5rem .8rem}
+.skip:focus{left:0;z-index:10}
+header,main,footer{max-width:41rem;margin:0 auto;padding:0 1.1rem}
+header{padding-top:2.6rem}
+h1,h2,h3,.sans,table,figcaption,nav,.byline,.stat,summary{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+h1{font-size:2rem;line-height:1.2;margin:.2rem 0 .6rem;letter-spacing:-.01em}
+h2{font-size:1.45rem;line-height:1.25;margin:3rem 0 .7rem;padding-top:.4rem;border-top:1px solid var(--rule)}
+h3{font-size:1.1rem;margin:1.9rem 0 .4rem}
+p{margin:.8rem 0}
+a{color:var(--accent)}
+.sub{font-size:1.1rem;color:var(--muted);margin:0 0 .8rem}
+.byline{font-size:.92rem;color:var(--muted)}
+.abstract{background:var(--card);border-radius:10px;padding:1rem 1.2rem;margin:1.6rem 0}
+.abstract h2{border:0;margin:0 0 .4rem;padding:0;font-size:1.05rem;text-transform:uppercase;letter-spacing:.06em}
+.abstract p{margin:.2rem 0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin:1.2rem 0}
+.stat{background:var(--card);border-radius:10px;padding:.8rem .9rem;font-size:.88rem;line-height:1.4;color:var(--muted)}
+.stat b{display:block;font-size:1.55rem;line-height:1.15;color:var(--fg);margin-bottom:.2rem}
+@media (max-width:36rem){.stats{grid-template-columns:1fr}h1{font-size:1.65rem}}
+nav{font-size:.92rem;margin:1.2rem 0}
+nav ol{margin:.3rem 0;padding-left:1.2rem;columns:2;column-gap:2rem}
+nav li{margin:.15rem 0}
+@media (max-width:36rem){nav ol{columns:1}}
+details{background:var(--card);border-radius:10px;padding:.5rem 1rem;margin:1rem 0;font-size:.98rem}
+summary{cursor:pointer;font-weight:600;font-size:.95rem}
+details dl{margin:.6rem 0}
+details dt{font-weight:600;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:.9rem;margin-top:.5rem}
+details dd{margin:0 0 .2rem 0}
+.callout{background:var(--note);border-left:4px solid var(--note-edge);border-radius:6px;padding:.6rem 1rem;margin:1.2rem 0;font-size:1rem}
+figure{margin:1.8rem 0}
+figure img{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:.4rem}
+figcaption{font-size:.9rem;line-height:1.45;color:var(--muted);margin-top:.5rem}
+figcaption b{color:var(--fg)}
+.tablewrap{overflow-x:auto;margin:1.2rem 0}
+table{border-collapse:collapse;width:100%;font-size:.88rem;line-height:1.35}
+caption{text-align:left;font-weight:600;padding-bottom:.4rem;font-size:.92rem}
+th,td{border-bottom:1px solid var(--rule);padding:.4rem .5rem;text-align:left;vertical-align:top}
+th{background:var(--card)}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.hl td{background:var(--card);font-weight:600}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85em;background:var(--card);padding:.05rem .3rem;border-radius:4px}
+ul,ol{padding-left:1.3rem}
+li{margin:.3rem 0}
+footer{margin-top:3.5rem;padding-bottom:3rem;font-size:.9rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:1rem}
+@media print{.skip,nav{display:none}body{background:#fff;color:#000}a{color:#000}}
+</style>
+</head>
+<body>
+<a class="skip" href="#abstract">Skip to the abstract</a>
+
+<header>
+<p class="byline">Research write-up &middot; FlyRank ML Internship, Machine Learning track</p>
+<h1>Which web pages are under-capturing clicks? A review queue tested on clients it had never seen</h1>
+<p class="sub">Built on FlyRank&rsquo;s anonymized starter dataset. Observed, directional evidence for deciding which pages a person reads first.</p>
+<p class="byline">Abdul Rehman Shahid &middot; November 2026 &middot; <a href="https://github.com/ARS-0/FlyRank-ML-Internship">code and notebooks on GitHub</a></p>
+</header>
+
+<main id="main">
+
+<section class="abstract" id="abstract" aria-labelledby="abstract-h">
+<h2 id="abstract-h">Abstract</h2>
+<p>Content teams usually have more pages than reviewers, so I asked a narrow question: of the pages that already rank in search, which ones will get noticeably fewer clicks than other pages at the same position over the next 30 days? I used FlyRank&rsquo;s anonymized starter dataset (30,000 pages from 32 clients, one trailing 90-day window), treating the most recent 30 days as the outcome and the older days as the inputs. I compared a hand-written rule with Logistic Regression and Random Forest models, always holding out whole clients, so every page was scored by a model that had never seen its client. On held-out clients the Logistic Regression&rsquo;s top 50 picks were right about 80% of the time against about 70% for the rule, when roughly a third of pages qualify, and the same test run with a random split and inputs that overlap the outcome would have shown 98 to 100%. The output is a ranked review queue with reason codes and a human-review checklist; it is observed, directional evidence from one snapshot, meant to decide which pages a person reads first, and it does not show that any rewrite recovers clicks.</p>
+</section>
+
+<div class="stats" role="list" aria-label="Three numbers to remember">
+<div class="stat" role="listitem"><b>80% vs 70%</b>Top-50 precision on held-out clients, Logistic Regression vs a plain rule. About 36% of pages qualify, so guessing gets about 36%.</div>
+<div class="stat" role="listitem"><b>99.6% &rarr; 81.6%</b>Random Forest&rsquo;s top-50 precision with a random split and overlapping inputs, vs with the design I report.</div>
+<div class="stat" role="listitem"><b>1 client</b>supplied every comparison article in the file, so I do not claim comparison articles underperform as a type.</div>
+</div>
+
+<nav aria-label="Sections">
+<strong>Sections</strong>
+<ol>
+<li><a href="#introduction">Introduction and problem</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#methodology">Methodology</a></li>
+<li><a href="#results">Results</a></li>
+<li><a href="#limitations">Limitations and honest framing</a></li>
+<li><a href="#recommendations">Ranked recommendations</a></li>
+<li><a href="#reproducibility">Reproducibility</a></li>
+<li><a href="#acknowledgments">Acknowledgments and data credit</a></li>
+</ol>
+</nav>
+
+<details open>
+<summary>Terms in one minute</summary>
+<dl>
+<dt>Impressions, clicks, CTR</dt><dd>An impression is a page showing up in a search result. CTR (click-through rate) is clicks divided by impressions. In this data CTRs are small: well under 1%.</dd>
+<dt>Position tier</dt><dd>Where a page ranks on average: <code>top_3</code> (position 3 or better), <code>page_1</code> (up to 10), <code>striking</code> (10&ndash;20), <code>page_3_5</code> (20&ndash;50), <code>deep</code> (below 50).</dd>
+<dt>Base rate</dt><dd>The share of pages that qualify, so you can see what guessing would score. Here, about 36%.</dd>
+<dt>Precision@K</dt><dd>Of the K pages the method ranks highest, the share that really did under-capture clicks.</dd>
+<dt>Held-out clients</dt><dd>Test pages come from clients that were not used to train the model, so the score says how it might do on a new client.</dd>
+</dl>
+</details>
+
+<h2 id="introduction">1. Introduction and problem</h2>
+<p>Picture a content editor at a small team. Hundreds of pages already show up in search results, and she has time to rework 30 titles and descriptions this week. Which 30?</p>
+<p>Clicks depend heavily on where a page ranks. In this data, pages in the top three positions earned a click on about 0.49% of their impressions, and pages ranked below position 50 earned about 0.04%. So a low click rate on its own says little. A deep page at 0.06% may be normal, while a page-one page at 0.20% may not be. The fair comparison is a page against other pages at the same position tier.</p>
+<p>That gives the question this paper tests:</p>
+<ul>
+<li><strong>Question.</strong> Of the pages that already rank, which will get at most half the clicks their tier peers get, for the same impressions, over the next 30 days?</li>
+<li><strong>Unit and output.</strong> One page in, a ranked score and one reason code out.</li>
+<li><strong>Action.</strong> A person reads the page and its search listing, and decides whether to change anything.</li>
+<li><strong>Cost of a wrong call.</strong> A false alarm costs a reviewer&rsquo;s time. A miss leaves a real click gap unread. Because a person reads every page before acting, I treat a false alarm as the cheaper mistake.</li>
+</ul>
+<p>I am not trying to explain how a search engine ranks pages, and nothing here shows that changing a page will bring clicks back. The queue is decision support: a list of pages that look worth reading first, and why.</p>
+
+<h2 id="data">2. Data</h2>
+<h3>Source</h3>
+<p>The data comes from the FlyRank ML Internship dataset, which has two parts. Everything in my models and results uses the first.</p>
+<ul>
+<li><strong>The starter slice (used for all results here).</strong> One row per page: 30,000 rows and 44 columns from 32 pseudonymized clients. Every metric covers a trailing 90-day window ending at export time. The file does not give calendar dates for that window.</li>
+<li><strong>The warehouse release (not used for any result here).</strong> A larger release on Hugging Face (build <code>flyrank_pseudonymized_warehouse_release_v20260703</code>) with about 79 million rows of daily search data. I used it once, for a data-contract check in Week 3: one month (2026-03) of the daily table has 9,841,378 rows, and 3,611,061 of them (36.7%) have Search Console data. That check shaped my caution about missing data, but none of the numbers in this paper come from the warehouse.</li>
+</ul>
+<h3>Time windows</h3>
+<p>The most recent 30 days are the <strong>outcome</strong>. Everything older, days 31 to 90 back, is the <strong>feature window</strong>, which I get by subtracting the last-30-day numbers from the 90-day totals. Inside it, &ldquo;days 31&ndash;60&rdquo; and &ldquo;days 61&ndash;90&rdquo; are kept separate so I can measure change over time without touching the outcome.</p>
+<h3>Who is in each group</h3>
+<div class="tablewrap">
+<table>
+<caption>Table 1. Populations used in this paper</caption>
+<thead><tr><th>Group</th><th class="n">Pages</th><th class="n">Clients</th><th>Rule for being in</th></tr></thead>
+<tbody>
+<tr><td>Starter file</td><td class="n">30,000</td><td class="n">32</td><td>Everything</td></tr>
+<tr><td>Week-4 screen</td><td class="n">22,006</td><td class="n">&ndash;</td><td>At least 100 impressions in 90 days</td></tr>
+<tr><td>Review queue</td><td class="n">15,441</td><td class="n">28</td><td>At least 500 impressions before the outcome window, and a real position</td></tr>
+<tr class="hl"><td>Validated pages</td><td class="n">9,102</td><td class="n">28</td><td>Queue pages that also have at least 500 impressions in the outcome window</td></tr>
+</tbody>
+</table>
+</div>
+<h3>What I left out, and why</h3>
+<ul>
+<li><strong>1,205 pages with no position data.</strong> In this file a position of 0 means &ldquo;no data,&rdquo; not &ldquo;position zero.&rdquo;</li>
+<li><strong>Pages with under 500 impressions.</strong> Too few clicks to tell a real gap from chance.</li>
+<li><strong>Fields I never used as inputs:</strong> the trend fields (built from the same windows as the outcome), every last-30-day column, the 90-day totals and CTR (they contain the outcome), days since last update (an update during the outcome window could change the result), and the pseudonymous IDs (used only to group clients for splitting).</li>
+<li><strong>The product&rsquo;s own decision flags.</strong> They are not in the file, and I would not have used them as inputs or labels.</li>
+</ul>
+<p>One consequence I want to be upfront about: requiring 500 impressions in the outcome window drops 41% of the pages that were visible beforehand (6,339 of 15,441). Those pages had lower earlier CTR (median 0.109% vs 0.201%) and fewer earlier impressions (median 1,053 vs 5,408). So accuracy numbers describe pages that stayed visible.</p>
+<h3>Public safety</h3>
+<p>The starter data has no client names, domains, URLs, page titles, or search queries. This page shows only aggregates and charts: no client identifiers, URLs, or queries.</p>
+<h3>A cross-check</h3>
+<p>FlyRank&rsquo;s own March 2026 research paper reports weighted CTR by position tier of 0.42%, 0.34%, 0.33%, 0.16% and 0.05% (top 3 to deep). On pages with at least 100 impressions I get 0.49%, 0.35%, 0.35%, 0.15% and 0.04%. The order is the same and four of the five tiers are close. The top-3 tier differs most, and it is the smallest one in this slice. The levels are low because they describe whole content portfolios, so I would not compare them with industry CTR benchmarks.</p>
+
+<h2 id="methodology">3. Methodology</h2>
+<h3>Assumptions</h3>
+<ul>
+<li>CTR depends mainly on position, so pages should be compared inside a position tier.</li>
+<li>The most recent 30 days are a fair stand-in for &ldquo;the next 30 days.&rdquo;</li>
+<li>A page with at least 500 impressions has enough clicks to judge.</li>
+<li>That a page&rsquo;s earlier click habits carry forward is something I test, not something I assume.</li>
+</ul>
+<h3>The label</h3>
+<p>A page is labelled 1 if, in the last 30 days, it got at most half the clicks its tier peers got for the same impressions. The yardstick for each tier is the pooled outcome-window CTR across all validated pages. It is a fixed benchmark, the same for every client, and it is not an input to any model. It is an observed outcome, not a bucket or a product flag. About 36% of validated pages (36.1%) are labelled 1.</p>
+<p>My first framing in Week 2 was a CTR ratio measured in the same window as the inputs. I replaced it, because a label has to be something that happens after the inputs are measured.</p>
+<h3>Baseline</h3>
+<p>The baseline is a hand-written rule from Week 4: for each page, missed clicks = (the tier&rsquo;s pooled CTR &times; the page&rsquo;s impressions) &minus; its actual clicks, floored at zero, computed on the feature window. Pages are ranked by missed clicks. No learning is involved.</p>
+<h3>Models and inputs</h3>
+<p>I tried three models: a depth-3 decision tree, a Logistic Regression (standardized inputs), and a Random Forest (300 trees). I started with readable models and added the forest to see whether it earns its extra complexity. The random seed is 42 throughout.</p>
+<p>There are 25 inputs, in three groups:</p>
+<ul>
+<li><strong>5 from the feature window:</strong> impressions, clicks and CTR from days 31&ndash;90, plus impressions and CTR from days 31&ndash;60.</li>
+<li><strong>14 static page facts:</strong> content type, search intent, search volume, competition, cost per click, word count (with a flag when it is missing), and page age.</li>
+<li><strong>6 position columns</strong> (average position and the tier) that cover all 90 days and therefore <em>overlap</em> the outcome window. The lane needs position, so I kept them and tested what happens without them.</li>
+</ul>
+<h3>Validation design</h3>
+<p>I split by client with 5-fold grouped cross-validation, and the code asserts that no client appears on both sides of any fold. I report precision at K = 50, 100 and 200 averaged over folds, plus AUC, with the base rate next to every number. I also repeated the test on 20 different random sets of held-out clients. The data is a single snapshot, so a time-aware split was not possible.</p>
+<h3>Leakage checks</h3>
+<ul>
+<li><strong>Column audit.</strong> No trend field, last-30-day column, 90-day total, CTR, or ID is among the inputs.</li>
+<li><strong>A planted leak.</strong> When I deliberately added the outcome window&rsquo;s own CTR as an input, precision@50 went to 1.000 for both models. So my test setup does catch a leak.</li>
+<li><strong>Before and after.</strong> I re-ran the models with the shortcuts, to measure how much they would have inflated the score (Figure 1).</li>
+<li><strong>Drop tests.</strong> I removed the position columns, the CTR inputs and the static facts one group at a time; the result moved little (Section 4).</li>
+<li><strong>Who gets scored.</strong> I checked the population rule described in Section 2.</li>
+</ul>
+
+<h2 id="results">4. Results</h2>
+<h3>Model versus baseline, on the same split</h3>
+<div class="tablewrap">
+<table>
+<caption>Table 2. Held-out clients, 5-fold, mean over folds, 9,102 pages. Base rate 36.1% overall (34.4% on average across test folds).</caption>
+<thead><tr><th>Method</th><th class="n">Precision@50</th><th class="n">@100</th><th class="n">@200</th><th class="n">AUC</th></tr></thead>
+<tbody>
+<tr><td>Rule baseline</td><td class="n">0.704</td><td class="n">0.636</td><td class="n">0.588</td><td class="n">0.738</td></tr>
+<tr><td>Decision tree (depth 3)</td><td class="n">0.644</td><td class="n">0.680</td><td class="n">0.666</td><td class="n">0.790</td></tr>
+<tr class="hl"><td>Logistic Regression</td><td class="n">0.800</td><td class="n">0.764</td><td class="n">0.742</td><td class="n">0.823</td></tr>
+<tr><td>Random Forest</td><td class="n">0.816</td><td class="n">0.818</td><td class="n">0.752</td><td class="n">0.834</td></tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li>Logistic Regression and Random Forest each beat the rule in 4 of 5 folds. In one fold, made of a single client, the rule won (0.72 vs 0.66 for Logistic Regression).</li>
+<li>Over 20 different sets of held-out clients, Logistic Regression beat the rule in 18 and Random Forest in 19. The average gain at precision@50 was +0.11 for Logistic Regression (spread about 0.10) and +0.17 for Random Forest.</li>
+<li>Without the biggest client (35% of the pages), the rule scores 0.66, Logistic Regression 0.75 and Random Forest 0.81.</li>
+<li>Random Forest edges out Logistic Regression (0.816 vs 0.800), a difference smaller than the swing between folds. The readable model gets nearly all of the gain.</li>
+<li>With 50 picks per fold, differences of 0.05 are noise. I read the ordering of the three methods as directional and only the gap between the rule and the two stronger models as a pattern.</li>
+</ul>
+<figure>
+<img src="img/w08_validation_before_after.png" alt="Grouped bar chart of precision at 50 for a rule baseline, Logistic Regression and Random Forest under four test designs. With 90-day inputs and a random split, the models score 0.98 and 1.00. With overlap removed and a random split they score 0.88 and 0.93. In the design I report, overlap removed and split by client, they score 0.80 and 0.82 against 0.70 for the rule. Keeping the overlap with a client split gives 0.96 and 0.97. A dashed line marks the 0.36 base rate.">
+<figcaption><b>Figure 1. What the honest test changed.</b> The same Random Forest scores 0.996 with a random split and inputs that overlap the outcome, and 0.816 with the design I report. About 18 points of the careless number was not skill. Both fixes matter: removing the overlap costs about 7 points, and holding out clients costs about 11 more.</figcaption>
+</figure>
+<h3>What the model leans on</h3>
+<p>Shuffling one input at a time on held-out clients, the biggest drops in AUC come from a page&rsquo;s own CTR in the feature window (0.070) and its CTR in days 31&ndash;60 (0.056), then its clicks in the feature window (0.017). Position, search volume and content type barely register. In the Logistic Regression, lower earlier CTR pushes a page toward being labelled 1. I read this as association only.</p>
+<p>An earlier version of my write-up said the model mostly learns that low CTR stays low. Dropping both CTR inputs changes the result very little (Random Forest 0.816 to 0.796), because earlier clicks and impressions let the model rebuild CTR. The accurate statement is that the model leans on how many clicks a page earned relative to its visibility earlier.</p>
+<h3>Where it is wrong</h3>
+<ul>
+<li><strong>False alarms are close calls with tiny click counts.</strong> One of the model&rsquo;s most confident false alarms was a deep-tier page expected to get about 0.5 clicks that got 1. Others had zero clicks earlier and then recovered to roughly the tier&rsquo;s level.</li>
+<li><strong>Misses are sudden drops.</strong> The pages the model scored lowest that did under-capture had decent earlier CTR (0.55&ndash;1.1%) and then fell to 0.08&ndash;0.20%. A model that reads only the earlier window cannot see that coming.</li>
+<li><strong>Concentration.</strong> The Random Forest&rsquo;s top 200 were 87.5% correct against the 36% base rate, but they came from 13 clients and 44% from one of them.</li>
+</ul>
+<h3>Ranking by value, not only accuracy</h3>
+<p>For the review queue I rank pages by the model&rsquo;s chance of under-capturing multiplied by the clicks at stake (the rule&rsquo;s missed clicks, scaled to 30 days). Pooling every held-out client and taking the top K of all 9,102 pages is a stricter cut than the per-fold numbers above, so the two sets of figures are not comparable with each other.</p>
+<figure>
+<img src="img/w07_topk_precision.png" alt="Bar chart of the share of top-ranked pages that really under-captured clicks, for the top 50, 100 and 200 pages, under three rankings: rule only, model chance only, and chance times clicks at stake. Rule only scores 0.80, 0.80 and 0.72. Model chance only scores 0.90, 0.87 and 0.86. The combined score scores 0.90, 0.90 and 0.885. A dashed line marks the 0.36 base rate.">
+<figcaption><b>Figure 2. Top-ranked pages by ranking method (all held-out clients pooled).</b> The combined score is right about 90% of the time at the top 50 and top 100, against 80% for the rule alone. The rule alone does pick slightly bigger pages: 123 realized missed clicks per page at the top 50, against 120 for the combined score and 9.5 for the model alone.</figcaption>
+</figure>
+<h3>What else the data showed</h3>
+<p><strong>Momentum, yes. Page age, no.</strong> I looked at 11,119 pages from 28 clients that had at least 500 impressions in days 31&ndash;60, and asked how many lost more than 20% of their impressions in the last 30 days (60.8% did overall).</p>
+<figure>
+<img src="img/w07_fade_momentum.png" alt="Bar chart of the share of pages whose impressions fell more than 20 percent in the next 30 days, by how impressions changed in the 30 days before. Pages that had fallen more than 26 percent: 70 percent, 4,321 pages. Fell 10 to 26 percent: 58 percent, 1,810 pages. About flat: 53 percent, 1,722 pages. Rose more than 10 percent: 54 percent, 3,203 pages. A dashed line marks 61 percent for all pages.">
+<figcaption><b>Figure 3. Pages already fading were more likely to keep fading.</b> 70% of pages whose impressions had fallen by more than a quarter fell again, against 53&ndash;54% of flat or rising pages. The gap is 16.4 points (95% range 14.3&ndash;18.5) and held in all 10 clients with at least 30 pages in both groups.</figcaption>
+</figure>
+<div class="tablewrap">
+<table>
+<caption>Table 3. Share of pages whose impressions fell more than 20% next month, by days since the page was last updated</caption>
+<thead><tr><th>Days since last update</th><th class="n">Pages</th><th class="n">Clients</th><th class="n">Share that fell</th></tr></thead>
+<tbody>
+<tr><td>0&ndash;30</td><td class="n">6,513</td><td class="n">26</td><td class="n">60.6%</td></tr>
+<tr><td>31&ndash;90</td><td class="n">35</td><td class="n">5</td><td class="n">too few</td></tr>
+<tr><td>91&ndash;180</td><td class="n">4,560</td><td class="n">15</td><td class="n">61.1%</td></tr>
+<tr><td>181+</td><td class="n">11</td><td class="n">1</td><td class="n">too few</td></tr>
+</tbody>
+</table>
+</div>
+<p>I expected stale pages to decay faster, and the data does not show that. Pages updated in the last 30 days and pages updated 91&ndash;180 days ago fell at the same rate. The other two groups are too small to say anything. So I cannot support a rule that flags pages by age, and I also cannot say that refreshing does not work, because the data has almost no long-untouched pages to compare against.</p>
+<p><strong>Comparison articles: I cannot separate the content type from the client.</strong> In an earlier check, comparison articles looked like they underperformed other articles at the same position. Then I found that all 697 comparison articles in the file come from a single client, and that client&rsquo;s keyword articles also get below-average CTR. Comparing with every client&rsquo;s keyword articles therefore mixes content type with client. The fair test is inside that one client:</p>
+<div class="tablewrap">
+<table>
+<caption>Table 4. Pooled CTR (%) at the one client that has both types, pages with at least 100 impressions</caption>
+<thead><tr><th>Position tier</th><th class="n">Comparison (pages)</th><th class="n">Same client, keyword (pages)</th><th>Gap, 95% range (points)</th></tr></thead>
+<tbody>
+<tr><td>page_1</td><td class="n">0.077 (226)</td><td class="n">0.171 (50)</td><td>0.034 to 0.161: a gap</td></tr>
+<tr><td>striking</td><td class="n">0.160 (76)</td><td class="n">0.160 (32)</td><td>&minus;0.084 to 0.091: no gap</td></tr>
+<tr><td>page_3_5</td><td class="n">0.094 (63)</td><td class="n">too few (7)</td><td>not testable</td></tr>
+</tbody>
+</table>
+</div>
+<p>So the evidence is mixed: lower click-through for comparison articles on page 1 at that client, no difference in striking distance, and nothing to test beyond that. I report it as unproven and make no recommendation by content type.</p>
+
+<h2 id="limitations">5. Limitations and honest framing</h2>
+<p>These are the things this work cannot claim.</p>
+<ul>
+<li><strong>No cause and effect.</strong> The data is one snapshot with no experiment. Nothing here shows that rewriting a title or refreshing a page recovers clicks.</li>
+<li><strong>Not about how a search engine ranks pages.</strong> I modelled click outcomes in one portfolio of content, nothing more.</li>
+<li><strong>One snapshot, 28 clients.</strong> The biggest client holds about 35% of validated pages, and results on a client the data did not cover could differ.</li>
+<li><strong>Accuracy is measured on 59% of the queue.</strong> The 9,102 validated pages kept at least 500 impressions in the outcome window. For the other 41% I have no accuracy number.</li>
+<li><strong>The label is a click gap, not business value.</strong> It does not measure revenue, leads or anything a client would call success.</li>
+<li><strong>Position columns overlap the outcome window.</strong> Dropping them changed the result very little (Random Forest 0.816 to 0.812, Logistic Regression 0.800 to 0.784), but I cannot remove the overlap from this file.</li>
+<li><strong>The yardsticks are computed on the same data they are used on.</strong> They are a baseline, not an independent standard.</li>
+<li><strong>Thin groups.</strong> Only 8 comparison articles and 38 feedly articles are among the validated pages. The deep tier is a weak label, because &ldquo;under half of the expected clicks&rdquo; there effectively means zero clicks.</li>
+<li><strong>Two folds are a single client each,</strong> and small K is noisy. I report every fold and treat small gaps as directional.</li>
+<li><strong>Zero clicks are ambiguous.</strong> A page with many impressions and no clicks could have broken tracking or could just be unclicked. This data cannot tell which.</li>
+<li><strong>Momentum is an association.</strong> Pages may fade for reasons the data cannot see, such as seasonality.</li>
+</ul>
+
+<h2 id="recommendations">6. Ranked recommendations</h2>
+<p>This is the action playbook that comes out of the work. Read it as decision support: the queue says which pages look worth reading first, and a person decides what to do.</p>
+<h3>What to do first, in order</h3>
+<div class="tablewrap">
+<table>
+<caption>Table 5. Each page gets one reason code and one suggested action. Within an action, pages are ranked by chance of under-capturing &times; clicks at stake.</caption>
+<thead><tr><th>#</th><th>Action</th><th>Reason code</th><th class="n">Pages</th><th>What happened next (pages with an outcome)</th><th>Who decides</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>CHECK_TRACKING_FIRST</code></td><td><code>DATA_CHECK_NO_CLICKS</code></td><td class="n">452</td><td>74.2% under-captured (n=267); zero clicks on 2,000+ impressions</td><td>Analyst, before anything else</td></tr>
+<tr><td>2</td><td><code>REWRITE_TITLE_META</code></td><td><code>CTR_BELOW_TIER_PEERS</code></td><td class="n">4,804</td><td>65.5% under-captured (n=2,321), against a 36.1% base rate</td><td>Content editor</td></tr>
+<tr><td>3</td><td><code>REVIEW_FOR_REFRESH</code></td><td><code>FADING_IMPRESSIONS</code></td><td class="n">4,492</td><td>Judged on impressions: 67.0% fell, against 47.0% for unflagged pages</td><td>Editor and analyst</td></tr>
+<tr><td>4</td><td><code>REVIEW_CONTENT_DEPTH</code></td><td><code>POSITION_LIMITED</code></td><td class="n">1,981</td><td>38.2% under-captured, about the base rate: the issue is rank, not the snippet</td><td>Content editor</td></tr>
+<tr><td>5</td><td><code>MONITOR_ONLY</code></td><td><code>NO_FLAG</code></td><td class="n">3,712</td><td>17.3% under-captured; 47.0% lost impressions</td><td>Nobody; re-score next period</td></tr>
+</tbody>
+</table>
+</div>
+<figure>
+<img src="img/w07_reason_code_evidence.png" alt="Horizontal bar chart of the share of pages that under-captured clicks in the next 30 days, by reason code. DATA_CHECK_NO_CLICKS 74 percent, 267 pages. CTR_BELOW_TIER_PEERS 66 percent, 2,321 pages. POSITION_LIMITED 38 percent, 1,298 pages. FADING_IMPRESSIONS 25 percent, 2,164 pages. NO_FLAG 17 percent, 3,052 pages. A dashed line marks the 36 percent base rate.">
+<figcaption><b>Figure 4. What each reason code turned out to mean.</b> Pages coded CTR_BELOW_TIER_PEERS under-captured about 66% of the time against a 36% base rate. The FADING code is about impressions, not CTR, so it is judged on whether impressions fell (67%).</figcaption>
+</figure>
+<p>I first tried a fifth code for pages the model flagged without any simple rule firing. It matched 1 page out of 15,441, so I dropped it. Pages are not clustered into archetypes; the codes are rules, and I do not map actions by content type because there are only 52 comparison and 118 feedly pages in the queue.</p>
+<h3>Human-review rules</h3>
+<ol>
+<li>A person reads the page and its search listing before anything changes. Every row, no exceptions.</li>
+<li><code>CHECK_TRACKING_FIRST</code> rows go to the analyst first. If the zero clicks are a data problem, nothing else on that row means anything.</li>
+<li>Review at most 25 pages per client per batch. Without that cap, one client took 54% of the top 100; with it, the biggest client holds 25%.</li>
+<li>Read the flags. A low expected click count (under 5 in 30 days) means one or two clicks flip the story. A thin history (page under 90 days old) means the earlier record is weak evidence. A deep-tier label effectively means zero clicks.</li>
+<li>Look for a normal reason for the gap: the answer shows in the search result itself, ads or other features sit above the listing, or the query is branded.</li>
+<li>Write down what the person decided and why, so the monthly re-score can learn from it.</li>
+</ol>
+<h3>What should not be automated</h3>
+<ul>
+<li>Rewriting or publishing titles and descriptions without a person reading the page.</li>
+<li>Deleting, merging, redirecting or unpublishing pages because of a score.</li>
+<li>Flagging a page for refresh because of its age alone. The data shows no age effect.</li>
+<li>Telling a client or manager to expect a specific click gain.</li>
+<li>Acting on <code>CHECK_TRACKING_FIRST</code> pages before the data has been checked.</li>
+<li>Using the queue on a new client without re-running the validation checks.</li>
+<li>Using it for comparison or feedly articles, where there is too little data to say anything.</li>
+<li>Making claims about what a search engine rewards, or putting client identifiers, URLs or queries in anything public.</li>
+</ul>
+<h3>Cost and value</h3>
+<p>Measured: the top 50 pages by the combined score had on average 119.8 realized missed clicks per page in the next 30 days, against 5.2 for an average validated page. I do not credit the model for most of that gap, because the rule alone gets 123.0 and both rankings favour big pages.</p>
+<p>Assumed, not measured: if a review and rewrite takes an hour a page, and a rewrite closed 10% or 25% of the gap, the arithmetic gives about 12 or 30 extra clicks per hour of work. Those recovery shares are my picks, not findings, and 0% is a live possibility. The sensible first step is a small test: try 20&ndash;30 pages from a per-client-capped list and leave a similar set of flagged pages untouched for comparison. Until that has run, I claim nothing about whether the actions work.</p>
+<h3>Light monitoring and retrain triggers</h3>
+<ul>
+<li><strong>Accuracy.</strong> Over 20 sets of held-out clients, precision@50 averaged 0.79 with a 5th percentile near 0.70. A month below 0.70 is worse than almost every holdout I saw, and means retrain and re-audit. It can only be measured after the 30 days have passed.</li>
+<li><strong>Fall back to the rule</strong> if the model is no better than the plain rule for two months in a row.</li>
+<li><strong>A retrain is accepted only after the validation checks are re-run</strong> (grouped split, leakage audit, failure examples). Nothing retrains and ships automatically.</li>
+<li><strong>Input checks.</strong> The share of the top 100 from one client, median earlier CTR, the number of zero-click pages with many impressions (452 today), the share of pages flagged as fading (29.1%), and how many pages are visible enough to score (15,441).</li>
+<li><strong>Calendar.</strong> Re-score monthly and re-check the tier yardsticks every quarter. These thresholds are judgment calls, and I would revisit them after a few months.</li>
+</ul>
+
+<h2 id="reproducibility">7. Reproducibility</h2>
+<p>Everything is in the public repository: <a href="https://github.com/ARS-0/FlyRank-ML-Internship">github.com/ARS-0/FlyRank-ML-Internship</a>. The starter CSV ships with it, and each notebook clones the repo and reads <code>data/raw/content_refresh_anonymized.csv</code>, so you can open a notebook in Colab and choose Run all.</p>
+<ul>
+<li><a href="https://github.com/ARS-0/FlyRank-ML-Internship/blob/main/work/notebooks/w04_baseline_score.ipynb">Week 4, the baseline rule and its first queue</a></li>
+<li><a href="https://github.com/ARS-0/FlyRank-ML-Internship/blob/main/work/notebooks/w05_model.ipynb">Week 5, models versus baseline</a></li>
+<li><a href="https://github.com/ARS-0/FlyRank-ML-Internship/blob/main/work/notebooks/w06_validation_audit.ipynb">Week 6, the validation and leakage audit, including the before and after</a></li>
+<li><a href="https://github.com/ARS-0/FlyRank-ML-Internship/blob/main/work/notebooks/w07_action_playbook.ipynb">Week 7, the action playbook and the exported queue</a></li>
+<li><a href="https://github.com/ARS-0/FlyRank-ML-Internship/blob/main/work/notebooks/capstone.ipynb">Capstone notebook, which re-derives this paper&rsquo;s key counts from the raw CSV and checks them against the receipts</a></li>
+</ul>
+<p>Random seed 42 throughout. The committed notebooks were run on scikit-learn 1.6.1 in Colab, and the same headline numbers also came out on versions 1.8.0 and 1.9.1. Rerunning on another version can move a figure by a point or two. Runtime is a few minutes per notebook.</p>
+<p><strong>Receipts.</strong> The numbers in this paper trace to four small metrics files, copied here as they stood at publication:
+<a href="receipts/w04_baseline_metrics.json">week 4</a>,
+<a href="receipts/w05_model_metrics.json">week 5</a>,
+<a href="receipts/w06_audit_metrics.json">week 6</a>,
+<a href="receipts/w07_playbook_metrics.json">week 7</a>.
+The ranked queue itself is a data file, so it is not committed. The Week-7 notebook regenerates it on every run.</p>
+
+<h2 id="acknowledgments">8. Acknowledgments and data credit</h2>
+<p><strong>Built on the FlyRank ML Internship dataset.</strong> Data from <a href="https://flyrank.ai" target="_blank" rel="noopener">FlyRank (flyrank.ai)</a>, pseudonymized and shared for the internship. Thank you to the FlyRank team for the data and the structure of the program.</p>
+<p>I also read FlyRank&rsquo;s March 2026 research paper closely and used it as the example I learned to audit; the CTR-by-position cross-check above comes from it.</p>
+<p>AI assistance: I used an AI assistant (Claude, from Anthropic) to draft and critique code and text. I checked the results by running the notebooks, and the numbers here come from those runs.</p>
+</main>
+
+<footer>
+<p>Abdul Rehman Shahid &middot; November 2026. This page shows aggregates only; no client names, URLs or queries appear on it. Claims are observed, measured, directional and decision-support.</p>
+</footer>
+</body>
+</html>
