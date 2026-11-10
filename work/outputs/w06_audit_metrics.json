@@ -1,0 +1,33 @@
+{
+  "seed": 42,
+  "sklearn": "1.8.0",
+  "eligible_pages": 9102,
+  "base_rate": 0.3606,
+  "before_after_precision_at_50": {
+    "A  BEFORE: 90-day features + random split": {
+      "Random Forest": 0.996,
+      "Logistic Regression": 0.984,
+      "Rule baseline": 0.724
+    },
+    "B  window-only features + random split": {
+      "Random Forest": 0.928,
+      "Logistic Regression": 0.88,
+      "Rule baseline": 0.724
+    },
+    "C  AFTER:  window-only features + split by client": {
+      "Random Forest": 0.816,
+      "Logistic Regression": 0.8,
+      "Rule baseline": 0.704
+    },
+    "D  90-day features + split by client": {
+      "Random Forest": 0.972,
+      "Logistic Regression": 0.964,
+      "Rule baseline": 0.704
+    }
+  },
+  "repeated_client_holdouts_20": {
+    "LogReg_beats_rule": 18,
+    "RF_beats_rule": 19
+  },
+  "comparison_articles_clients": 1
+}
